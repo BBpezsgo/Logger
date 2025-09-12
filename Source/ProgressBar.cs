@@ -2,32 +2,7 @@ using System.Text;
 
 namespace Logger;
 
-public static class ProgressExtensions
-{
-    public static IEnumerable<T> WithProgress<T>(this IReadOnlyCollection<T> collection, ProgressBar progressBar, string title)
-    {
-        int current = 0;
-        int total = collection.Count;
-        foreach (T item in collection)
-        {
-            progressBar.Report(title, current++, total);
-            yield return item;
-        }
-    }
-
-    public static IEnumerable<T> WithProgress<T>(this IReadOnlyCollection<T> collection, ProgressBar progressBar)
-    {
-        int current = 0;
-        int total = collection.Count;
-        foreach (T item in collection)
-        {
-            progressBar.Report(current++, total);
-            yield return item;
-        }
-    }
-}
-
-public class ProgressBar : IDisposable, IProgress<float>
+public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
 {
     static readonly TimeSpan AnimationInterval = TimeSpan.FromSeconds(1.0 / 8);
 
@@ -45,6 +20,7 @@ public class ProgressBar : IDisposable, IProgress<float>
         Timer = new Timer(TimerHandler);
         Lock = new Lock();
         Log.InteractiveLocks.Add(Lock);
+        Progress = float.NaN;
         if (Console.IsOutputRedirected) return;
 
         Log.Keep(LastLine);
@@ -59,11 +35,18 @@ public class ProgressBar : IDisposable, IProgress<float>
         Interlocked.Exchange(ref Progress, value);
     }
 
-    public void Report(int index, int length) => Report((float)index / (float)length);
-
-    public void Report(string title, float value)
+    void IProgress<double>.Report(double value)
     {
         value = Math.Clamp(value, 0f, 1f);
+
+        Interlocked.Exchange(ref Progress, (float)value);
+    }
+
+    public void Report(int index, int length) => Report((float)index / (float)length);
+
+    public void Report(string title, float value = float.NaN)
+    {
+        if (!float.IsNaN(value)) value = Math.Clamp(value, 0f, 1f);
 
         Interlocked.Exchange(ref Title, title);
         Interlocked.Exchange(ref Progress, value);
@@ -87,21 +70,33 @@ public class ProgressBar : IDisposable, IProgress<float>
             LastLine.Back();
             LastLine = default;
 
-            LastLine += Log.Write(title);
-            LastLine += Log.Write(new string(' ', Math.Max(0, Console.WindowWidth / 2 - title.Length)));
-            int w = Console.WindowWidth - Console.CursorLeft - 2;
-            if (w >= 2)
+            if (!float.IsNaN(Progress))
             {
-                int fill = (int)(w * Progress);
-                int empty = w - fill;
+                LastLine += Log.Write(title);
+                LastLine += Log.Write(new string(' ', Math.Max(0, Console.WindowWidth / 2 - title.Length)));
+                int w = Console.WindowWidth - Console.CursorLeft - 2;
+                if (w >= 2)
+                {
+                    int fill = (int)(w * Progress);
+                    int empty = w - fill;
 
-                StringBuilder b = new();
-                b.Append('[');
-                b.Append('#', fill);
-                b.Append(' ', empty);
-                b.Append(']');
+                    StringBuilder b = new();
+                    b.Append('[');
+                    b.Append('#', fill);
+                    b.Append(' ', empty);
+                    b.Append(']');
 
-                LastLine += Log.Write(b.ToString());
+                    LastLine += Log.Write(b.ToString());
+                }
+            }
+            else
+            {
+                int w = LastLine.Length;
+
+                LastLine.Back();
+                LastLine = Log.Write(title);
+
+                Console.Write(new string(' ', Math.Max(0, w - LastLine.Length)));
             }
 
             Log.Rekeep(LastLine);

@@ -6,6 +6,8 @@ public readonly struct LogEntry(string text) : IAdditionOperators<LogEntry, LogE
 {
     readonly string _text = text;
 
+    public int Length => _text?.Length ?? 0;
+
     public void Clear()
     {
         if (string.IsNullOrEmpty(_text)) return;
