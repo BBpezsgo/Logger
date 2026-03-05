@@ -103,6 +103,12 @@ public static partial class Log
         Console.ResetColor();
     }
 
+    public static void None()
+    {
+        using AutoScope _ = Auto();
+        Console.WriteLine();
+    }
+
     public static void Warning(string text)
     {
         using AutoScope _ = Auto();

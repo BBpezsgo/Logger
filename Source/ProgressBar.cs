@@ -15,12 +15,16 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
     bool IsDisposed;
     LogEntry LastLine;
 
+    public int MaxWidth;
+
     public ProgressBar()
     {
         Timer = new Timer(TimerHandler);
         Lock = new Lock();
         Log.InteractiveLocks.Add(Lock);
         Progress = float.NaN;
+        MaxWidth = int.MaxValue;
+
         if (Console.IsOutputRedirected) return;
 
         Log.Keep(LastLine);
@@ -62,9 +66,11 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
 
             string title = Title;
 
-            if (title.Length >= Console.WindowWidth / 2)
+            int width = Math.Min(Console.WindowWidth - 1, MaxWidth);
+
+            if (title.Length >= width / 2)
             {
-                title = title[..(Console.WindowWidth / 2 - 3)] + "...";
+                title = title[..(width / 2 - 3)] + "...";
             }
 
             LastLine.Back();
@@ -72,21 +78,41 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
 
             if (!float.IsNaN(Progress))
             {
-                LastLine += Log.Write(title);
-                LastLine += Log.Write(new string(' ', Math.Max(0, Console.WindowWidth / 2 - title.Length)));
-                int w = Console.WindowWidth - Console.CursorLeft - 2;
-                if (w >= 2)
+                if (string.IsNullOrWhiteSpace(Title))
                 {
-                    int fill = (int)(w * Progress);
-                    int empty = w - fill;
+                    int w = width;
+                    if (w >= 2)
+                    {
+                        int fill = (int)(w * Progress);
+                        int empty = w - fill;
 
-                    StringBuilder b = new();
-                    b.Append('[');
-                    b.Append('#', fill);
-                    b.Append(' ', empty);
-                    b.Append(']');
+                        StringBuilder b = new();
+                        b.Append('[');
+                        b.Append('#', fill);
+                        b.Append(' ', empty);
+                        b.Append(']');
 
-                    LastLine += Log.Write(b.ToString());
+                        LastLine += Log.Write(b.ToString());
+                    }
+                }
+                else
+                {
+                    LastLine += Log.Write(title);
+                    LastLine += Log.Write(new string(' ', Math.Max(0, width / 2 - title.Length)));
+                    int w = width - Console.CursorLeft - 1;
+                    if (w >= 2)
+                    {
+                        int fill = (int)(w * Progress);
+                        int empty = w - fill;
+
+                        StringBuilder b = new();
+                        b.Append('[');
+                        b.Append('#', fill);
+                        b.Append(' ', empty);
+                        b.Append(']');
+
+                        LastLine += Log.Write(b.ToString());
+                    }
                 }
             }
             else
