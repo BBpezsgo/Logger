@@ -2,10 +2,11 @@ namespace Logger;
 
 public static partial class Log
 {
-    static async Task<string?> ReadLineAsync(CancellationToken token)
+    static async Task<string?> ReadLineAsync(CancellationToken cancellationToken)
     {
         using StreamReader reader = new(Console.OpenStandardInput());
-        return await reader.ReadLineAsync(token);
+        var res = await reader.ReadLineAsync(cancellationToken);
+        return res;
     }
 
     public static bool AskYesNo(string question, bool? defaultValue = null)
@@ -116,7 +117,9 @@ public static partial class Log
         while (true);
     }
 
-    public static string AskInput(string question, Func<string, bool> validator, string? defaultValue = null)
+    public delegate bool InputValidator(string input);
+
+    public static string AskInput(string question, InputValidator validator, string? defaultValue = null)
     {
         string result;
         do
@@ -126,13 +129,44 @@ public static partial class Log
         return result;
     }
 
-    public static async Task<string> AskInputAsync(string question, Func<string, bool> validator, string? defaultValue = null, CancellationToken cancellationToken = default)
+    public static async Task<string> AskInputAsync(string question, InputValidator validator, string? defaultValue = null, CancellationToken cancellationToken = default)
     {
         string result;
         do
         {
             result = await AskInputAsync(question, defaultValue, cancellationToken);
         } while (!validator.Invoke(result));
+        return result;
+    }
+
+    public delegate bool InputParser<T>(string input, out T result);
+
+    public static bool IntParser(string input, out int result)
+    {
+        if (int.TryParse(input, out result)) return true;
+        Error($"Invalid input");
+        return false;
+    }
+
+    public static T AskInput<T>(string question, InputParser<T> parser)
+    {
+        T result;
+        string input;
+        do
+        {
+            input = AskInput(question, null);
+        } while (!parser.Invoke(input, out result));
+        return result;
+    }
+
+    public static async Task<T> AskInputAsync<T>(string question, InputParser<T> parser, CancellationToken cancellationToken = default)
+    {
+        T result;
+        string input;
+        do
+        {
+            input = await AskInputAsync(question, null, cancellationToken);
+        } while (!parser.Invoke(input, out result));
         return result;
     }
 }

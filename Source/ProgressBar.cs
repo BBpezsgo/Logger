@@ -48,7 +48,12 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
 
     public void Report(int index, int length) => Report((float)index / (float)length);
 
-    public void Report(string title, float value = float.NaN)
+    public void Report(string title)
+    {
+        Interlocked.Exchange(ref Title, title);
+    }
+
+    public void Report(string title, float value)
     {
         if (!float.IsNaN(value)) value = Math.Clamp(value, 0f, 1f);
 
@@ -66,7 +71,7 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
 
             string title = Title;
 
-            int width = Math.Min(Console.WindowWidth - 1, MaxWidth);
+            int width = Math.Min(Console.WindowWidth - 2, MaxWidth);
 
             if (title.Length >= width / 2)
             {
@@ -117,12 +122,8 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
             }
             else
             {
-                int w = LastLine.Length;
-
                 LastLine.Back();
-                LastLine = Log.Write(title);
-
-                Console.Write(new string(' ', Math.Max(0, w - LastLine.Length)));
+                LastLine = Log.Write(title + new string(' ', Math.Max(0, width - title.Length - 1)));
             }
 
             Log.Rekeep(LastLine);

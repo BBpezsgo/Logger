@@ -5,7 +5,7 @@ public static partial class Log
     static LogEntry LastLogEntry;
     internal static List<Lock> InteractiveLocks = [];
 
-    readonly struct AutoScope : IDisposable
+    public readonly struct AutoScope : IDisposable
     {
         public void Dispose()
         {
@@ -17,7 +17,7 @@ public static partial class Log
         }
     }
 
-    static AutoScope Auto()
+    public static AutoScope Auto()
     {
         foreach (Lock item in InteractiveLocks)
         {
@@ -122,6 +122,16 @@ public static partial class Log
         Console.ResetColor();
     }
 
+    public static void WarningNoprefix(string text)
+    {
+        using AutoScope _ = Auto();
+
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.Write("             ");
+        Console.WriteLine(text);
+        Console.ResetColor();
+    }
+
     public static void Error(string text)
     {
         using AutoScope _ = Auto();
@@ -135,6 +145,16 @@ public static partial class Log
         Console.ResetColor();
     }
 
+    public static void ErrorNoprefix(string text)
+    {
+        using AutoScope _ = Auto();
+
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Write("           ");
+        Console.WriteLine(text);
+        Console.ResetColor();
+    }
+
     static void ErrorImpl(Exception? exception)
     {
         if (exception is null) return;
@@ -142,26 +162,43 @@ public static partial class Log
         static void _(Exception e, int depth)
         {
             Console.Write(new string(' ', depth * 2));
-            if (e is ApplicationException appE)
+            switch (e)
             {
-                Console.Write(e.Message);
-                Console.WriteLine();
-            }
-            else
-            {
+                case ApplicationException appE:
+                    Console.Write(e.Message);
+                    Console.WriteLine();
+                    break;
+                case HttpRequestException httpRequestE:
+                    if (httpRequestE.StatusCode.HasValue)
+                    {
+                        Console.Write($"HTTP {(int)httpRequestE.StatusCode} ({httpRequestE.StatusCode}) ");
+                    }
+                    else
+                    {
+                        Console.Write("HTTP Error ");
+                    }
+                    Console.Write($"({httpRequestE.HttpRequestError}) ");
+                    Console.Write(httpRequestE.Message);
+                    Console.WriteLine();
+                    break;
+                default:
+                    {
 #if DEBUG
-                Console.Write(e.GetType().Name);
-                Console.Write(' ');
+                        Console.Write(e.GetType().Name);
+                        Console.Write(' ');
 #endif
-                Console.Write(e.Message);
-                Console.WriteLine();
+                        Console.Write(e.Message);
+                        Console.WriteLine();
 #if DEBUG
-                foreach (string item in e.StackTrace?.Split('\n') ?? [])
-                {
-                    Console.Write(new string(' ', depth * 2 + 2));
-                    Console.WriteLine(item.Trim());
-                }
+                        foreach (string item in e.StackTrace?.Split('\n') ?? [])
+                        {
+                            Console.Write(new string(' ', depth * 2 + 2));
+                            Console.WriteLine(item.Trim());
+                        }
+
 #endif
+                        break;
+                    }
             }
         }
 
