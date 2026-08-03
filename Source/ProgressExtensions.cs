@@ -23,4 +23,15 @@ public static class ProgressExtensions
             yield return item;
         }
     }
+
+    public static IEnumerable<T> WithProgress<T>(this IReadOnlyCollection<T> collection, ProgressBar progressBar, Func<T, string> title)
+    {
+        int current = 0;
+        int total = collection.Count;
+        foreach (T item in collection)
+        {
+            progressBar.Report(title(item), current++, total);
+            yield return item;
+        }
+    }
 }
