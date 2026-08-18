@@ -33,8 +33,8 @@ public readonly struct LogEntry(string text) : IAdditionOperators<LogEntry, LogE
         }
         else
         {
-            string b = new('\b', _text.Length);
-            Console.Write(b);
+            //Console.Write(new string('\b', _text.Length));
+            Console.Write("\e[0G");
         }
     }
 

@@ -150,4 +150,17 @@ public class ProgressBar : IDisposable, IProgress<float>, IProgress<double>
         IsDisposed = true;
         GC.SuppressFinalize(this);
     }
+
+    public static void PrintFilled(double value, int width)
+    {
+        const string p = "█▉▊▋▌▍▎▏ ";
+
+        int filled = (int)(width * (double)value);
+        int notFilled = (int)(width * (1f - (double)value));
+        int segment = (int)((double)value * width % 1 * (p.Length - 1));
+
+        Console.Write(new string(p[0], filled));
+        if (filled + notFilled < width) Console.Write(p[p.Length - 1 - segment]);
+        Console.Write(new string(p[^1], notFilled));
+    }
 }
