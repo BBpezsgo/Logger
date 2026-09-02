@@ -2,51 +2,33 @@ using System.Text;
 
 namespace Logger;
 
-public class ProgressBar : ProgressBarBase, IProgress<float>, IProgress<double>
+public class SteppingProgressBar : ProgressBarBase
 {
-    float Progress;
-    string Title = string.Empty;
+    readonly int Total;
     readonly string Characters;
+    int Current;
+    string Title = string.Empty;
 
-    public ProgressBar(string characters = Hashtags)
+    public SteppingProgressBar(int total, string characters = Hashtags)
     {
-        Progress = float.NaN;
+        Total = total;
         Characters = characters;
     }
 
-    public void Report(float value)
+    public void Step(int count = 1)
     {
-        value = Math.Clamp(value, 0f, 1f);
-
-        Interlocked.Exchange(ref Progress, value);
+        Interlocked.Exchange(ref Current, Current + count);
     }
 
-    void IProgress<double>.Report(double value)
-    {
-        value = Math.Clamp(value, 0f, 1f);
-
-        Interlocked.Exchange(ref Progress, (float)value);
-    }
-
-    public void Report(int index, int length) => Report((float)index / (float)length);
-
-    public void Report(string title)
+    public void Step(string title, int count = 0)
     {
         Interlocked.Exchange(ref Title, title);
+        if (count != 0) Interlocked.Exchange(ref Current, Current + count);
     }
-
-    public void Report(string title, float value)
-    {
-        if (!float.IsNaN(value)) value = Math.Clamp(value, 0f, 1f);
-
-        Interlocked.Exchange(ref Title, title);
-        Interlocked.Exchange(ref Progress, value);
-    }
-
-    public void Report(string title, int index, int length) => Report(title, (float)index / (float)length);
 
     protected override void Render(ref LogEntry line)
     {
+
         string title = Title;
 
         int width = Math.Min(Console.WindowWidth - 2, MaxWidth);
@@ -56,11 +38,13 @@ public class ProgressBar : ProgressBarBase, IProgress<float>, IProgress<double>
             title = title[..(width / 2 - 3)] + "...";
         }
 
-        if (float.IsNaN(Progress))
+        if (Total <= 0)
         {
             line = Log.Write(title + new string(' ', Math.Max(0, width - title.Length - 1)));
             return;
         }
+
+        float progress = (float)Current / (float)Total;
 
         if (string.IsNullOrWhiteSpace(Title))
         {
@@ -69,7 +53,7 @@ public class ProgressBar : ProgressBarBase, IProgress<float>, IProgress<double>
             {
                 StringBuilder b = new();
                 b.Append('[');
-                b.Append(Render(Progress, w, Characters));
+                b.Append(Render(progress, w, Characters));
                 b.Append(']');
 
                 line += Log.Write(b.ToString());
@@ -84,7 +68,7 @@ public class ProgressBar : ProgressBarBase, IProgress<float>, IProgress<double>
             {
                 StringBuilder b = new();
                 b.Append('[');
-                b.Append(Render(Progress, w, Characters));
+                b.Append(Render(progress, w, Characters));
                 b.Append(']');
 
                 line += Log.Write(b.ToString());

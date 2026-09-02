@@ -184,18 +184,22 @@ public static partial class Log
                 default:
                     {
 #if DEBUG
+                        var c = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
                         Console.Write(e.GetType().Name);
                         Console.Write(' ');
+                        Console.ForegroundColor = c;
 #endif
                         Console.Write(e.Message);
                         Console.WriteLine();
 #if DEBUG
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
                         foreach (string item in e.StackTrace?.Split('\n') ?? [])
                         {
                             Console.Write(new string(' ', depth * 2 + 2));
                             Console.WriteLine(item.Trim());
                         }
-
+                        Console.ForegroundColor = c;
 #endif
                         break;
                     }
